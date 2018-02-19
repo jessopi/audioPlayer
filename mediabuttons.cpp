@@ -34,6 +34,12 @@ MediaButtons::MediaButtons(QWidget *parent) : QWidget(parent)
     connect(stopButton, &QAbstractButton::clicked,this,&MediaButtons::stop);
     connect(nextButton, &QAbstractButton::clicked,this,&MediaButtons::next);
 
+    connect(muteButton,&QAbstractButton::clicked,this,&MediaButtons::muteClicked);
+
+    connect(volumeSlider,&QAbstractSlider::valueChanged,this,&MediaButtons::volumeSliderChanged);
+    volumeSlider->setRange(0, 100);
+    volumeSlider->setValue(100);
+
     QBoxLayout *layout = new QHBoxLayout;
     layout->setMargin(0);
     layout->addWidget(previousButton);
@@ -88,11 +94,22 @@ void MediaButtons::playClicked()
 
 void MediaButtons::muteClicked()
 {
-
-    //emit muteToggle(true);
+    if(muted == false)
+    {
+        muteButton->setIcon(style()->standardIcon(QStyle::SP_MediaVolumeMuted));
+        muted = true;
+        emit muteToggle(true);
+    }
+    else
+    {
+        muteButton->setIcon(style()->standardIcon(QStyle::SP_MediaVolume));
+        muted = false;
+        emit muteToggle(false);
+    }
 }
 
 void MediaButtons::volumeSliderChanged()
 {
-    emit volumeSliderChanged();
+    int vol = volumeSlider->value();
+    emit volumeLevel(vol);
 }

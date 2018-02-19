@@ -90,6 +90,10 @@ MainWindow::MainWindow(QWidget *parent)
     connect(mButtons, &MediaButtons::next,m_playlist, &QMediaPlaylist::next);
     connect(mButtons, &MediaButtons::previous,m_playlist, &QMediaPlaylist::previous);
 
+    connect(mButtons,&MediaButtons::muteToggle,m_player,&QMediaPlayer::setMuted);
+
+    connect(mButtons,&MediaButtons::volumeLevel,m_player,&QMediaPlayer::setVolume);
+
     connect(m_Slider,&QSlider::sliderMoved,this,&MainWindow::seek);
 
    connect(m_player,&QMediaPlayer::positionChanged,[&](quint64 pos){

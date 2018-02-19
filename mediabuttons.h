@@ -20,7 +20,7 @@ signals:
     void next();
     void previous();
     void muteToggle(bool toggle);
-    void volumeLevel();
+    void volumeLevel(int vol);
 public slots:
     void playClicked();
     void muteClicked();
