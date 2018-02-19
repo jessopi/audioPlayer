@@ -23,6 +23,7 @@ public slots:
     void removeSong();
     void clearSong();
 private:
+    void seek(int seconds);
     QMediaPlayer *m_player = nullptr;
     QMediaPlaylist *m_playlist = nullptr;
 

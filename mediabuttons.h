@@ -14,8 +14,8 @@ public:
 public slots:
     void setState(QMediaPlayer::State state);
 signals:
-    void play();
-    void pause();
+    void play(); //done
+    void pause(); //done
     void stop();
     void next();
     void previous();

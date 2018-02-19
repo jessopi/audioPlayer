@@ -14,7 +14,8 @@ MediaButtons::MediaButtons(QWidget *parent) : QWidget(parent)
 
     playButton = new QPushButton(this);
     playButton->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
-    connect(playButton, &QAbstractButton::clicked,this,&MediaButtons::playClicked);
+
+
 
     stopButton = new QPushButton(this);
     stopButton->setIcon(style()->standardIcon(QStyle::SP_MediaStop));
@@ -27,6 +28,11 @@ MediaButtons::MediaButtons(QWidget *parent) : QWidget(parent)
 
 
     volumeSlider = new QSlider(Qt::Horizontal,this);
+
+    connect(previousButton, &QAbstractButton::clicked,this,&MediaButtons::previous);
+    connect(playButton, &QAbstractButton::clicked,this,&MediaButtons::playClicked);
+    connect(stopButton, &QAbstractButton::clicked,this,&MediaButtons::stop);
+    connect(nextButton, &QAbstractButton::clicked,this,&MediaButtons::next);
 
     QBoxLayout *layout = new QHBoxLayout;
     layout->setMargin(0);
@@ -42,18 +48,37 @@ MediaButtons::MediaButtons(QWidget *parent) : QWidget(parent)
 }
 void MediaButtons::setState(QMediaPlayer::State state)
 {
-    currentPlayerState = state;
+    if(currentPlayerState == state)
+        return;
+    else
+    {
+        currentPlayerState = state;
 
-
+        if(currentPlayerState == QMediaPlayer::StoppedState	)
+        {
+            stopButton->setEnabled(false);
+            playButton->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
+        }
+        else if(currentPlayerState == QMediaPlayer::PlayingState)
+        {
+            stopButton->setEnabled(true);
+            playButton->setIcon(style()->standardIcon(QStyle::SP_MediaPause));
+        }
+        else if(currentPlayerState == QMediaPlayer::PausedState)
+        {
+            stopButton->setEnabled(true);
+            playButton->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
+        }
+    }
 }
 
 void MediaButtons::playClicked()
 {
-    if(currentPlayerState == 0 || currentPlayerState  == 1)
+    if(currentPlayerState == QMediaPlayer::PausedState || currentPlayerState  == QMediaPlayer::StoppedState)
     {
         emit play();
     }
-    else if(currentPlayerState == 2)
+    else if(currentPlayerState == QMediaPlayer::PlayingState)
     {
         emit pause();
     }
