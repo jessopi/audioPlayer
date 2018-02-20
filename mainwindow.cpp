@@ -10,6 +10,7 @@
 #include <QMenuBar>
 #include <QFileDialog>
 #include <QTime>
+#include "wavfile.h"
 #include <QFile>
 #include "tfile.h"
 #include <QTextStream>
@@ -60,12 +61,13 @@ MainWindow::MainWindow(QWidget *parent)
     QWidget *wdg = new QWidget(this);
     MediaButtons *mButtons = new MediaButtons(this);
     //songPlaylist = new QListWidget(this);
-    songPlaylist = new QTableWidget(0,3,this);
+    songPlaylist = new QTableWidget(0,4,this);
 
     QStringList labels;
-    labels << tr("Title") << tr("Length") <<tr("Artist");
+    labels << tr("Title") << tr("Artist") <<tr("Album") <<tr("Length");
     songPlaylist->setHorizontalHeaderLabels(labels);
     songPlaylist->horizontalHeader()->setSectionResizeMode(0,QHeaderView::Stretch);
+    songPlaylist->horizontalHeader()->setSectionResizeMode(1,QHeaderView::Stretch);
     songPlaylist->horizontalHeader()->setSectionResizeMode(2,QHeaderView::Stretch);
 
     songPlaylist->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -106,7 +108,10 @@ MainWindow::MainWindow(QWidget *parent)
 
     songPlaylist->setSelectionMode(QAbstractItemView::SingleSelection);
 
-    connect(mButtons, &MediaButtons::play, m_player, &QMediaPlayer::play);
+    connect(mButtons, &MediaButtons::play,[&](){
+                    m_playlist->setCurrentIndex(songPlaylist->currentIndex().row());
+                    m_player->play();
+            });
     connect(mButtons, &MediaButtons::pause,m_player, &QMediaPlayer::pause);
     connect(mButtons, &MediaButtons::stop,m_player, &QMediaPlayer::stop);
 
@@ -136,6 +141,12 @@ MainWindow::MainWindow(QWidget *parent)
         m_Slider->setMaximum(dur/1000);
     });
 
+    connect(songPlaylist,&QTableWidget::doubleClicked,[&](const QModelIndex &index){
+        int t = index.row();
+       m_playlist->setCurrentIndex(t);
+       //then play?
+       m_player->play();
+    });
 
     QHBoxLayout *hLayout = new QHBoxLayout;
     hLayout->addWidget(m_Slider);
@@ -173,7 +184,7 @@ void MainWindow::seek(int seconds)
 
 void MainWindow::loadPlaylist()
 {
-    QString fileName = QFileDialog::getOpenFileName(this,tr("Load File"));
+    QString fileName = QFileDialog::getOpenFileName(this,tr("Load File"),"Playlists",tr("Text files (*.txt)"));
     QFile inputFile(fileName);
     QFileInfo f;
     if (inputFile.open(QIODevice::ReadOnly))
@@ -209,7 +220,7 @@ void MainWindow::savePlaylist()
 
 void MainWindow::addSong()
 {
-    QStringList files = QFileDialog::getOpenFileNames(this, tr("Select Music Files"));
+    QStringList files = QFileDialog::getOpenFileNames(this, tr("Select Music Files"),"",tr("Audio files (*.mp3 *.wav)"));
     if(files.empty())
           return;
     for(int i = 0; i < files.count();i++)
@@ -233,7 +244,7 @@ void MainWindow::removeSong()
 void MainWindow::clearSong()
 {
     m_playlist->clear();
-    songPlaylist->clear();
+    //songPlaylist->clear(); might be unneeded also clears headers which is a problem
     songPlaylist->setRowCount(0);
     //ui->playButton->setIcon(style()->standardIcon(QStyle::SP_MediaPause));
     //updateSongLabel();
@@ -247,4 +258,6 @@ void MainWindow::parseMetadata(QString s)
     songPlaylist->setItem(songPlaylist->rowCount()-1,0,new QTableWidgetItem(fileRef.tag()->title().toCString()));
     songPlaylist->setItem(songPlaylist->rowCount()-1,1,new QTableWidgetItem(fileRef.tag()->artist().toCString()));
     songPlaylist->setItem(songPlaylist->rowCount()-1,2,new QTableWidgetItem(fileRef.tag()->album().toCString()));
+    double test = fileRef.audioProperties()->lengthInSeconds()/60.0;
+    songPlaylist->setItem(songPlaylist->rowCount()-1,3,new QTableWidgetItem(QString::number(test)));
 }
