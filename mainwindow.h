@@ -24,6 +24,7 @@ public slots:
     void removeSong();
     void clearSong();
 private:
+    QString formatIntoTime(quint64);
     void parseMetadata(QString s);
     void seek(int seconds);
     QMediaPlayer *m_player = nullptr;

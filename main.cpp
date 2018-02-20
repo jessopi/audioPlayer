@@ -11,6 +11,7 @@ int main(int argc, char *argv[])
     FramelessWindow frameless;
 
     frameless.setWindowTitle("musicPlayer");
+   // frameless.setWindowState(Qt::WindowMaximized);
     MainWindow *w = new MainWindow;
     frameless.setContent(w);
     frameless.show();

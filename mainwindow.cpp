@@ -10,14 +10,10 @@
 #include <QMenuBar>
 #include <QFileDialog>
 #include <QTime>
-#include "wavfile.h"
-#include <QFile>
 #include "tfile.h"
 #include <QTextStream>
 #include <QFileInfo>
-#include "tstring.h"
 #include "tag.h"
-#include <QtDebug>
 #include "fileref.h"
 
 MainWindow::MainWindow(QWidget *parent)
@@ -27,9 +23,7 @@ MainWindow::MainWindow(QWidget *parent)
     m_player->setAudioRole(QAudio::MusicRole);
     m_playlist = new QMediaPlaylist();
     m_player->setPlaylist(m_playlist);
-    /*
-     * Connect slots to signals here
-     */
+
     QMenu *file;
     QMenu *file1;
 
@@ -39,7 +33,7 @@ MainWindow::MainWindow(QWidget *parent)
     QAction *save = new QAction(tr("Save Playlist"),this);
     connect(save,SIGNAL(triggered()),this,SLOT(savePlaylist()));
 
-    file = menuBar()->addMenu("Playlist");
+    file = menuBar()->addMenu("File");
 
     file->addAction(save);
     file->addAction(open);
@@ -53,89 +47,57 @@ MainWindow::MainWindow(QWidget *parent)
     QAction *clear = new QAction(tr("Clear Songs"),this);
     connect(clear,SIGNAL(triggered()),this,SLOT(clearSong()));
 
-    file1 = menuBar()->addMenu("Actions");
+    file1 = menuBar()->addMenu("Edit");
     file1->addAction(add);
     file1->addAction(remove);
     file1->addAction(clear);
 
     QWidget *wdg = new QWidget(this);
     MediaButtons *mButtons = new MediaButtons(this);
-    //songPlaylist = new QListWidget(this);
-    songPlaylist = new QTableWidget(0,4,this);
 
+    songPlaylist = new QTableWidget(0,4,this);
     QStringList labels;
     labels << tr("Title") << tr("Artist") <<tr("Album") <<tr("Length");
     songPlaylist->setHorizontalHeaderLabels(labels);
     songPlaylist->horizontalHeader()->setSectionResizeMode(0,QHeaderView::Stretch);
     songPlaylist->horizontalHeader()->setSectionResizeMode(1,QHeaderView::Stretch);
     songPlaylist->horizontalHeader()->setSectionResizeMode(2,QHeaderView::Stretch);
-
     songPlaylist->setEditTriggers(QAbstractItemView::NoEditTriggers);
-
+    songPlaylist->setSelectionMode(QAbstractItemView::SingleSelection);
     songPlaylist->setSelectionBehavior(QAbstractItemView::SelectRows);
     songPlaylist->verticalHeader()->hide();
-    //songPlaylist->setShowGrid(false);
 
     m_Slider =  new QSlider(Qt::Horizontal,this);
     m_Slider->setRange(0,m_player->duration() / 1000);
 
     currentSongDuration = new QLabel(this);
-    currentSongDuration->setText("00:00");
-
     currentSongName = new QLabel(this);
     currentSongName->setText("");
 
-    //connect
     connect(m_player, &QMediaPlayer::stateChanged, mButtons, &MediaButtons::setState);
-
-    //keep track of current row when next/prev is hit
-    //if song stopped need to remove label
     connect(m_playlist,&QMediaPlaylist::currentIndexChanged,[&](int pos){
-        //songPlaylist->setCurrentRow(pos);
-        songPlaylist->setCurrentCell(pos,0);
-        if(m_playlist->currentIndex()!= - 1)
-        {
-            //const QString& s = songPlaylist->currentItem()->text();
-           // currentSongName->setText(s);
-        }
-        else
-        {
-            //currentSongName->setText("");
-        }
+        (m_playlist->currentIndex() != -1)?  currentSongName->setText(songPlaylist->item(pos,0)->text()) :  currentSongName->setText("");
     });
-
-
-
-    songPlaylist->setSelectionMode(QAbstractItemView::SingleSelection);
-
     connect(mButtons, &MediaButtons::play,[&](){
                     m_playlist->setCurrentIndex(songPlaylist->currentIndex().row());
                     m_player->play();
             });
     connect(mButtons, &MediaButtons::pause,m_player, &QMediaPlayer::pause);
-    connect(mButtons, &MediaButtons::stop,m_player, &QMediaPlayer::stop);
-
+    connect(mButtons, &MediaButtons::stop,[&](){
+        m_player->stop();
+        currentSongName->setText("");
+    });
     connect(mButtons, &MediaButtons::next,m_playlist, &QMediaPlaylist::next);
     connect(mButtons, &MediaButtons::previous,m_playlist, &QMediaPlaylist::previous);
-
     connect(mButtons,&MediaButtons::muteToggle,m_player,&QMediaPlayer::setMuted);
-
     connect(mButtons,&MediaButtons::volumeLevel,m_player,&QMediaPlayer::setVolume);
-
     connect(m_Slider,&QSlider::sliderMoved,this,&MainWindow::seek);
-
-   connect(m_player,&QMediaPlayer::positionChanged,[&](quint64 pos){
+    connect(m_player,&QMediaPlayer::positionChanged,[&](quint64 pos){
         if(!m_Slider->isSliderDown())
             m_Slider->setValue(pos/1000);
 
-        QString tStr;
-        qint64 currentInfo = pos/1000;
-
-            QTime currentTime((currentInfo / 3600) % 60, (currentInfo / 60) % 60,currentInfo % 60, (currentInfo * 1000) % 1000);
-            QString format = "mm:ss";
-            tStr = currentTime.toString(format);
-
-        currentSongDuration->setText(tStr);
+        qint64 currentInfo = pos/1000;  
+        currentSongDuration->setText(formatIntoTime(currentInfo));
     });
     connect(m_player,&QMediaPlayer::durationChanged,[&](quint64 dur){
         m_Slider->setMaximum(dur/1000);
@@ -144,7 +106,6 @@ MainWindow::MainWindow(QWidget *parent)
     connect(songPlaylist,&QTableWidget::doubleClicked,[&](const QModelIndex &index){
         int t = index.row();
        m_playlist->setCurrentIndex(t);
-       //then play?
        m_player->play();
     });
 
@@ -160,22 +121,18 @@ MainWindow::MainWindow(QWidget *parent)
     buttonLayout->addWidget(mButtons);
     buttonLayout->addStretch(1);
     buttonLayout->addWidget(currentSongName);
-    //buttonLayout->addWidget(toolbar);
 
     QBoxLayout *layout = new QVBoxLayout;
-   // layout->addLayout();
     layout->addLayout(buttonLayout);
     layout->addLayout(hLayout);
     layout->addLayout(displayLayout);
 
     wdg->setLayout(layout);
     setCentralWidget(wdg);
-    //setLayout(layout);
 }
 
 MainWindow::~MainWindow()
-{
-}
+{}
 
 void MainWindow::seek(int seconds)
 {
@@ -220,7 +177,7 @@ void MainWindow::savePlaylist()
 
 void MainWindow::addSong()
 {
-    QStringList files = QFileDialog::getOpenFileNames(this, tr("Select Music Files"),"",tr("Audio files (*.mp3 *.wav)"));
+    QStringList files = QFileDialog::getOpenFileNames(this, tr("Select Music Files"),"",tr("Audio files (*.mp3)"));
     if(files.empty())
           return;
     for(int i = 0; i < files.count();i++)
@@ -246,8 +203,18 @@ void MainWindow::clearSong()
     m_playlist->clear();
     //songPlaylist->clear(); might be unneeded also clears headers which is a problem
     songPlaylist->setRowCount(0);
+    currentSongName->setText("");
     //ui->playButton->setIcon(style()->standardIcon(QStyle::SP_MediaPause));
-    //updateSongLabel();
+
+}
+
+QString MainWindow::formatIntoTime(quint64 input)
+{
+    //HH:MM:SS
+     QTime currentTime((input / 3600) % 60, (input / 60) % 60,input % 60);
+     QString format = "mm:ss";
+     QString outputString = currentTime.toString(format);
+     return outputString;
 }
 
 void MainWindow::parseMetadata(QString s)
@@ -258,6 +225,6 @@ void MainWindow::parseMetadata(QString s)
     songPlaylist->setItem(songPlaylist->rowCount()-1,0,new QTableWidgetItem(fileRef.tag()->title().toCString()));
     songPlaylist->setItem(songPlaylist->rowCount()-1,1,new QTableWidgetItem(fileRef.tag()->artist().toCString()));
     songPlaylist->setItem(songPlaylist->rowCount()-1,2,new QTableWidgetItem(fileRef.tag()->album().toCString()));
-    double test = fileRef.audioProperties()->lengthInSeconds()/60.0;
-    songPlaylist->setItem(songPlaylist->rowCount()-1,3,new QTableWidgetItem(QString::number(test)));
+    qint64 seconds = fileRef.audioProperties()->lengthInSeconds();
+    songPlaylist->setItem(songPlaylist->rowCount()-1,3,new QTableWidgetItem(formatIntoTime(seconds)));
 }

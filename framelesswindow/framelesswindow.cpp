@@ -152,7 +152,7 @@ void FramelessWindow::on_maximizeButton_clicked()
 {
   restoreButton->setVisible(true);
   maximizeButton->setVisible(false);
-  setWindowState(Qt::WindowMaximized);
+  setWindowState(Qt::WindowFullScreen);
   styleWindow(true, false);
 }
 void FramelessWindow::on_closeButton_clicked()
