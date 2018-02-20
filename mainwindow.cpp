@@ -3,6 +3,7 @@
 #include <QBoxLayout>
 #include <QMenuBar>
 #include <QWidget>
+#include <QHeaderView>
 #include <QToolBar>
 #include <QString>
 #include <QMessageBox>
@@ -10,8 +11,13 @@
 #include <QFileDialog>
 #include <QTime>
 #include <QFile>
+#include "tfile.h"
 #include <QTextStream>
 #include <QFileInfo>
+#include "tstring.h"
+#include "tag.h"
+#include <QtDebug>
+#include "fileref.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -51,10 +57,22 @@ MainWindow::MainWindow(QWidget *parent)
     file1->addAction(remove);
     file1->addAction(clear);
 
-
     QWidget *wdg = new QWidget(this);
     MediaButtons *mButtons = new MediaButtons(this);
-    songPlaylist = new QListWidget(this);
+    //songPlaylist = new QListWidget(this);
+    songPlaylist = new QTableWidget(0,3,this);
+
+    QStringList labels;
+    labels << tr("Title") << tr("Length") <<tr("Artist");
+    songPlaylist->setHorizontalHeaderLabels(labels);
+    songPlaylist->horizontalHeader()->setSectionResizeMode(0,QHeaderView::Stretch);
+    songPlaylist->horizontalHeader()->setSectionResizeMode(2,QHeaderView::Stretch);
+
+    songPlaylist->setEditTriggers(QAbstractItemView::NoEditTriggers);
+
+    songPlaylist->setSelectionBehavior(QAbstractItemView::SelectRows);
+    songPlaylist->verticalHeader()->hide();
+    //songPlaylist->setShowGrid(false);
 
     m_Slider =  new QSlider(Qt::Horizontal,this);
     m_Slider->setRange(0,m_player->duration() / 1000);
@@ -71,17 +89,22 @@ MainWindow::MainWindow(QWidget *parent)
     //keep track of current row when next/prev is hit
     //if song stopped need to remove label
     connect(m_playlist,&QMediaPlaylist::currentIndexChanged,[&](int pos){
-        songPlaylist->setCurrentRow(pos);
+        //songPlaylist->setCurrentRow(pos);
+        songPlaylist->setCurrentCell(pos,0);
         if(m_playlist->currentIndex()!= - 1)
         {
-            const QString& s = songPlaylist->currentItem()->text();
-            currentSongName->setText(s);
+            //const QString& s = songPlaylist->currentItem()->text();
+           // currentSongName->setText(s);
         }
         else
         {
-            currentSongName->setText("");
+            //currentSongName->setText("");
         }
     });
+
+
+
+    songPlaylist->setSelectionMode(QAbstractItemView::SingleSelection);
 
     connect(mButtons, &MediaButtons::play, m_player, &QMediaPlayer::play);
     connect(mButtons, &MediaButtons::pause,m_player, &QMediaPlayer::pause);
@@ -114,13 +137,6 @@ MainWindow::MainWindow(QWidget *parent)
     });
 
 
-
-
-
-
-
-
-
     QHBoxLayout *hLayout = new QHBoxLayout;
     hLayout->addWidget(m_Slider);
     hLayout->addWidget(currentSongDuration);
@@ -148,7 +164,6 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
-
 }
 
 void MainWindow::seek(int seconds)
@@ -169,10 +184,8 @@ void MainWindow::loadPlaylist()
        {
           QString line = in.readLine();
           f.setFile(line);
-
           m_playlist->addMedia(QUrl(f.absoluteFilePath()));
-          songPlaylist->addItem(f.fileName());
-
+          parseMetadata(line);
        }
        inputFile.close();
     }
@@ -203,17 +216,17 @@ void MainWindow::addSong()
     {
         QFileInfo f(files.at(i));
         m_playlist->addMedia(QUrl(f.absoluteFilePath()));
-        songPlaylist->addItem(f.fileName());
+        parseMetadata(files.at(i));
     }
-    int index = songPlaylist->currentIndex().row();
-    songPlaylist->setCurrentRow(index);
+    //int index = songPlaylist->currentIndex().row();
+    //songPlaylist->setCurrentRow(index);
 }
 
 void MainWindow::removeSong()
 {
     int index = songPlaylist->currentRow();
     m_playlist->removeMedia(index);
-    songPlaylist->takeItem(index);
+    songPlaylist->removeRow(index);
     //updateSongLabel();
 }
 
@@ -221,6 +234,17 @@ void MainWindow::clearSong()
 {
     m_playlist->clear();
     songPlaylist->clear();
+    songPlaylist->setRowCount(0);
     //ui->playButton->setIcon(style()->standardIcon(QStyle::SP_MediaPause));
     //updateSongLabel();
+}
+
+void MainWindow::parseMetadata(QString s)
+{
+    songPlaylist->insertRow(songPlaylist->rowCount());
+    TagLib::FileRef fileRef( reinterpret_cast<const wchar_t*>(s.constData()) );
+
+    songPlaylist->setItem(songPlaylist->rowCount()-1,0,new QTableWidgetItem(fileRef.tag()->title().toCString()));
+    songPlaylist->setItem(songPlaylist->rowCount()-1,1,new QTableWidgetItem(fileRef.tag()->artist().toCString()));
+    songPlaylist->setItem(songPlaylist->rowCount()-1,2,new QTableWidgetItem(fileRef.tag()->album().toCString()));
 }

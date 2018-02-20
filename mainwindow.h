@@ -5,6 +5,7 @@
 #include <QMediaPlayer>
 #include <QMediaPlaylist>
 #include <QLabel>
+#include <QTableWidget>
 #include <QSlider>
 #include <QListWidget>
 
@@ -23,6 +24,7 @@ public slots:
     void removeSong();
     void clearSong();
 private:
+    void parseMetadata(QString s);
     void seek(int seconds);
     QMediaPlayer *m_player = nullptr;
     QMediaPlaylist *m_playlist = nullptr;
@@ -31,7 +33,8 @@ private:
 
     QLabel *currentSongDuration = nullptr;
     QSlider *m_Slider = nullptr;
-    QListWidget *songPlaylist = nullptr;
+    //QListWidget *songPlaylist = nullptr;
+    QTableWidget *songPlaylist = nullptr;
 };
 
 #endif // MAINWINDOW_H
