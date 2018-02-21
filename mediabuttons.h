@@ -3,8 +3,10 @@
 
 #include <QWidget>
 #include <QMediaPlayer>
-#include <QAbstractButton>
-#include <QAbstractSlider>
+#include <QSlider>
+#include <QPushButton>
+#include <QBoxLayout>
+#include <QStyle>
 
 class MediaButtons : public QWidget
 {
@@ -24,16 +26,15 @@ signals:
 public slots:
     void playClicked();
     void muteClicked();
-    void volumeSliderChanged();
 
 private:
     bool muted;
-    QAbstractButton *playButton = nullptr;
-    QAbstractButton *stopButton = nullptr;
-    QAbstractButton *previousButton = nullptr;
-    QAbstractButton *nextButton = nullptr;
-    QAbstractButton *muteButton = nullptr;
-    QAbstractSlider *volumeSlider = nullptr;
+    QPushButton *playButton = nullptr;
+    QPushButton *stopButton = nullptr;
+    QPushButton *previousButton = nullptr;
+    QPushButton *nextButton = nullptr;
+    QPushButton *muteButton = nullptr;
+    QSlider *volumeSlider = nullptr;
 
 
     QMediaPlayer::State currentPlayerState = QMediaPlayer::StoppedState;

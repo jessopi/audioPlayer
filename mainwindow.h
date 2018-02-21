@@ -4,11 +4,21 @@
 #include <QMainWindow>
 #include <QMediaPlayer>
 #include <QMediaPlaylist>
-#include <QWidget>
 #include <QLabel>
 #include <QTableWidget>
 #include <QSlider>
+#include <QBoxLayout>
+#include <QHeaderView>
+
+#include <QMenuBar>
+#include <QFileDialog>
+#include <QTime>
+#include <QFont>
+#include <QFileInfo>
+
 #include "mediabuttons.h"
+#include "tag.h"
+#include "fileref.h"
 
 class MainWindow : public QMainWindow
 {
@@ -28,16 +38,21 @@ private:
     QString formatIntoTime(quint64);
     void parseMetadata(QString s);
     void seek(int seconds);
+
     QMediaPlayer *mediaPlayer = nullptr;
     QMediaPlaylist *mediaPlaylist = nullptr;
+    MediaButtons *mediaButtons = nullptr;
 
     QLabel *currentSongName = nullptr;
-
     QLabel *currentSongDuration = nullptr;
+
     QSlider *seekSlider = nullptr;
+
     QMenu *file = nullptr;
     QMenu *edit = nullptr;
+
     QTableWidget *playlistTable = nullptr;
+
     QAction *open = nullptr;
     QAction *save = nullptr;
     QAction *add = nullptr;
@@ -45,7 +60,6 @@ private:
     QAction *clear = nullptr;
 
     QWidget *combinedLayout = nullptr;
-    MediaButtons *mediaButtons = nullptr;
 };
 
 #endif // MAINWINDOW_H

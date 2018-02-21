@@ -1,17 +1,4 @@
 #include "mainwindow.h"
-#include <QBoxLayout>
-#include <QHeaderView>
-#include <QToolBar>
-#include <QString>
-#include <QMenuBar>
-#include <QFileDialog>
-#include <QTime>
-#include "tfile.h"
-#include <QTextStream>
-#include <QFont>
-#include <QFileInfo>
-#include "tag.h"
-#include "fileref.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -33,7 +20,7 @@ MainWindow::MainWindow(QWidget *parent)
     clear = new QAction(tr("Clear Songs"),this);
 
     connect(open,SIGNAL(triggered()),this,SLOT(loadPlaylist()));
-    connect(save,SIGNAL(triggered()),this,SLOT(savePlaylist())); 
+    connect(save,SIGNAL(triggered()),this,SLOT(savePlaylist()));
     connect(add,SIGNAL(triggered()),this,SLOT(addSong()));
     connect(remove,SIGNAL(triggered()),this,SLOT(removeSong()));
     connect(clear,SIGNAL(triggered()),this,SLOT(clearSong()));
@@ -48,7 +35,7 @@ MainWindow::MainWindow(QWidget *parent)
     edit->addAction(clear);
     //Menu Bar creation end
 
-
+    //playlist table creation and properties
     playlistTable = new QTableWidget(0,4,this);
     QStringList labels;
     labels << tr("Title") << tr("Artist") <<tr("Album") <<tr("Length");
@@ -61,19 +48,26 @@ MainWindow::MainWindow(QWidget *parent)
     playlistTable->setSelectionBehavior(QAbstractItemView::SelectRows);
     playlistTable->verticalHeader()->hide();
 
+    //seek slider
     seekSlider =  new QSlider(Qt::Horizontal,this);
     seekSlider->setRange(0,mediaPlayer->duration() / 1000);
 
+    //labels for songName & duration
     currentSongDuration = new QLabel(this);
     currentSongName = new QLabel(this);
     currentSongName->setText("");
-    QFont *k = new QFont();
-    k->setPixelSize(20);
-    currentSongName->setFont(*k);
+
+    QFont k;
+    k.setPixelSize(20);
+    currentSongName->setFont(k);
 
 
-    //CONNECTORS
+    /******************Connections**********************/
+
+
     connect(mediaPlayer, &QMediaPlayer::stateChanged, mediaButtons, &MediaButtons::setState);
+
+    //sets currentsongname when music index changes
     connect(mediaPlaylist,&QMediaPlaylist::currentIndexChanged,[&](int pos){
         (mediaPlaylist->currentIndex() != -1)?  currentSongName->setText(playlistTable->item(pos,0)->text()) :  currentSongName->setText("");
     });
@@ -90,7 +84,7 @@ MainWindow::MainWindow(QWidget *parent)
             });
     connect(mediaButtons, &MediaButtons::pause,mediaPlayer, &QMediaPlayer::pause);
     connect(mediaButtons, &MediaButtons::stop,[&](){
-        //mediaPlayer->stop();
+        mediaPlayer->stop();
         currentSongName->setText("");
     });
     connect(mediaButtons, &MediaButtons::next,mediaPlaylist, &QMediaPlaylist::next);
@@ -102,33 +96,34 @@ MainWindow::MainWindow(QWidget *parent)
         if(!seekSlider->isSliderDown())
             seekSlider->setValue(pos/1000);
 
-        qint64 currentInfo = pos/1000;  
+        qint64 currentInfo = pos/1000;
         currentSongDuration->setText(formatIntoTime(currentInfo));
     });
     connect(mediaPlayer,&QMediaPlayer::durationChanged,[&](quint64 dur){
         seekSlider->setMaximum(dur/1000);
     });
     connect(playlistTable,&QTableWidget::doubleClicked,[&](const QModelIndex &index){
-        int t = index.row();
-       mediaPlaylist->setCurrentIndex(t);
+       mediaPlaylist->setCurrentIndex(index.row());
        mediaPlayer->play();
     });
-    //
-    //LAYOUT ARRANGEMENT
-    QHBoxLayout *hLayout = new QHBoxLayout;
+
+
+    /*****************Layout creation and arrangement***************/
+
+    QHBoxLayout *hLayout = new QHBoxLayout();
     hLayout->addWidget(seekSlider);
     hLayout->addWidget(currentSongDuration);
 
-    QBoxLayout *displayLayout = new QHBoxLayout;
+    QBoxLayout *displayLayout = new QHBoxLayout();
     displayLayout->addWidget(playlistTable);
 
-    QBoxLayout *buttonLayout = new QHBoxLayout;
+    QBoxLayout *buttonLayout = new QHBoxLayout();
     buttonLayout->setMargin(0);
     buttonLayout->addWidget(mediaButtons);
     buttonLayout->addStretch(1);
     buttonLayout->addWidget(currentSongName);
 
-    QBoxLayout *layout = new QVBoxLayout;
+    QBoxLayout *layout = new QVBoxLayout();
     layout->addLayout(buttonLayout);
     layout->addLayout(hLayout);
     layout->addLayout(displayLayout);
@@ -140,11 +135,13 @@ MainWindow::MainWindow(QWidget *parent)
 MainWindow::~MainWindow()
 {}
 
+//sets position of song according to where seek slider is moved
 void MainWindow::seek(int seconds)
 {
     mediaPlayer->setPosition(seconds * 1000);
 }
 
+//opens chosen textfile located in Playlist folder and adds contents to mediaplaylist and table
 void MainWindow::loadPlaylist()
 {
     QString fileName = QFileDialog::getOpenFileName(this,tr("Load File"),"Playlists",tr("Text files (*.txt)"));
@@ -165,9 +162,10 @@ void MainWindow::loadPlaylist()
     }
 }
 
+//Opens dialog and saves playlist to playlist folder in UTF-8 format
 void MainWindow::savePlaylist()
 {
-    QString fileName = QFileDialog::getSaveFileName(this, tr("Save File"),"playlist.txt",tr("Text files (*.txt)"));
+    QString fileName = QFileDialog::getSaveFileName(this, tr("Save File"),"Playlists",tr("Text files (*.txt)"));
     QFile f(fileName);
     if(f.open(QIODevice::WriteOnly))
     {
@@ -181,6 +179,7 @@ void MainWindow::savePlaylist()
     }
 }
 
+//Opens dialog to open X amount of media files and add them to playlist & table
 void MainWindow::addSong()
 {
     QStringList files = QFileDialog::getOpenFileNames(this, tr("Select Music Files"),"",tr("Audio files (*.mp3)"));
@@ -192,27 +191,28 @@ void MainWindow::addSong()
         mediaPlaylist->addMedia(QUrl(f.absoluteFilePath()));
         parseMetadata(files.at(i));
     }
-    //int index = playlistTable->currentIndex().row();
-    //playlistTable->setCurrentRow(index);
 }
 
+//Removes selected index from mediaPlaylist & table
 void MainWindow::removeSong()
 {
     int index = playlistTable->currentRow();
     mediaPlaylist->removeMedia(index);
     playlistTable->removeRow(index);
-    //updateSongLabel();
+    //prevents out of bounds error when setting songName to label
+    (mediaPlaylist->currentIndex() != -1)?  currentSongName->setText(playlistTable->item(playlistTable->currentRow(),0)->text()) :  currentSongName->setText("");
 }
 
+//Removes all songs from mediaPlaylist and table
 void MainWindow::clearSong()
 {
     mediaPlaylist->clear();
+    //use setrowcount over clear, since clear removes header labels.
     playlistTable->setRowCount(0);
     currentSongName->setText("");
-
-    //ui->playButton->setIcon(style()->standardIcon(QStyle::SP_MediaPause));
 }
 
+//Formats input from seekSlider and parser and returns formatted string.
 QString MainWindow::formatIntoTime(quint64 input)
 {
     //HH:MM:SS
@@ -222,6 +222,8 @@ QString MainWindow::formatIntoTime(quint64 input)
      return outputString;
 }
 
+//Parses metadata of mp3 files only.
+//To include other file parsing need to add functions for that specific file.
 void MainWindow::parseMetadata(QString s)
 {
     playlistTable->insertRow(playlistTable->rowCount());

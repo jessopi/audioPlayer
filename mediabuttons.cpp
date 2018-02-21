@@ -1,11 +1,4 @@
 #include "mediabuttons.h"
-#include <QPushButton>
-#include <QBoxLayout>
-#include <QSlider>
-#include <QStyle>
-#include <QToolButton>
-#include <QComboBox>
-#include <QAudio>
 
 MediaButtons::MediaButtons(QWidget *parent) : QWidget(parent)
 {
@@ -14,8 +7,6 @@ MediaButtons::MediaButtons(QWidget *parent) : QWidget(parent)
 
     playButton = new QPushButton(this);
     playButton->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
-
-
 
     stopButton = new QPushButton(this);
     stopButton->setIcon(style()->standardIcon(QStyle::SP_MediaStop));
@@ -29,14 +20,19 @@ MediaButtons::MediaButtons(QWidget *parent) : QWidget(parent)
 
     volumeSlider = new QSlider(Qt::Horizontal,this);
 
-    connect(previousButton, &QAbstractButton::clicked,this,&MediaButtons::previous);
-    connect(playButton, &QAbstractButton::clicked,this,&MediaButtons::playClicked);
-    connect(stopButton, &QAbstractButton::clicked,this,&MediaButtons::stop);
-    connect(nextButton, &QAbstractButton::clicked,this,&MediaButtons::next);
 
-    connect(muteButton,&QAbstractButton::clicked,this,&MediaButtons::muteClicked);
+    /*******CONNECTORS******/
+    connect(previousButton, &QPushButton::clicked,this,&MediaButtons::previous);
+    connect(playButton, &QPushButton::clicked,this,&MediaButtons::playClicked);
+    connect(stopButton, &QPushButton::clicked,this,&MediaButtons::stop);
+    connect(nextButton, &QPushButton::clicked,this,&MediaButtons::next);
 
-    connect(volumeSlider,&QAbstractSlider::valueChanged,this,&MediaButtons::volumeSliderChanged);
+    connect(muteButton,&QPushButton::clicked,this,&MediaButtons::muteClicked);
+
+    connect(volumeSlider,&QSlider::valueChanged,[&](){
+        emit volumeLevel(volumeSlider->value());
+    });
+
     volumeSlider->setRange(0, 100);
     volumeSlider->setValue(100);
 
@@ -52,6 +48,8 @@ MediaButtons::MediaButtons(QWidget *parent) : QWidget(parent)
 
     muted = false;
 }
+
+//updates playerstate and changes icons accordingly
 void MediaButtons::setState(QMediaPlayer::State state)
 {
     if(currentPlayerState == state)
@@ -78,6 +76,7 @@ void MediaButtons::setState(QMediaPlayer::State state)
     }
 }
 
+//toggles play and paused when clicked and changes icon
 void MediaButtons::playClicked()
 {
     if(currentPlayerState == QMediaPlayer::PausedState || currentPlayerState  == QMediaPlayer::StoppedState)
@@ -88,10 +87,8 @@ void MediaButtons::playClicked()
     {
         emit pause();
     }
-    else
-        return;
 }
-
+//toggles mute when clicked and changes mute icon
 void MediaButtons::muteClicked()
 {
     if(muted == false)
@@ -106,10 +103,4 @@ void MediaButtons::muteClicked()
         muted = false;
         emit muteToggle(false);
     }
-}
-
-void MediaButtons::volumeSliderChanged()
-{
-    int vol = volumeSlider->value();
-    emit volumeLevel(vol);
 }
