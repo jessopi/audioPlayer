@@ -14,8 +14,8 @@ public:
 public slots:
     void setState(QMediaPlayer::State state);
 signals:
-    void play(); //done
-    void pause(); //done
+    void play();
+    void pause();
     void stop();
     void next();
     void previous();
@@ -34,6 +34,7 @@ private:
     QAbstractButton *nextButton = nullptr;
     QAbstractButton *muteButton = nullptr;
     QAbstractSlider *volumeSlider = nullptr;
+
 
     QMediaPlayer::State currentPlayerState = QMediaPlayer::StoppedState;
 };

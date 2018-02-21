@@ -4,10 +4,11 @@
 #include <QMainWindow>
 #include <QMediaPlayer>
 #include <QMediaPlaylist>
+#include <QWidget>
 #include <QLabel>
 #include <QTableWidget>
 #include <QSlider>
-#include <QListWidget>
+#include "mediabuttons.h"
 
 class MainWindow : public QMainWindow
 {
@@ -27,15 +28,24 @@ private:
     QString formatIntoTime(quint64);
     void parseMetadata(QString s);
     void seek(int seconds);
-    QMediaPlayer *m_player = nullptr;
-    QMediaPlaylist *m_playlist = nullptr;
+    QMediaPlayer *mediaPlayer = nullptr;
+    QMediaPlaylist *mediaPlaylist = nullptr;
 
     QLabel *currentSongName = nullptr;
 
     QLabel *currentSongDuration = nullptr;
-    QSlider *m_Slider = nullptr;
-    //QListWidget *songPlaylist = nullptr;
-    QTableWidget *songPlaylist = nullptr;
+    QSlider *seekSlider = nullptr;
+    QMenu *file = nullptr;
+    QMenu *edit = nullptr;
+    QTableWidget *playlistTable = nullptr;
+    QAction *open = nullptr;
+    QAction *save = nullptr;
+    QAction *add = nullptr;
+    QAction *remove = nullptr;
+    QAction *clear = nullptr;
+
+    QWidget *combinedLayout = nullptr;
+    MediaButtons *mediaButtons = nullptr;
 };
 
 #endif // MAINWINDOW_H

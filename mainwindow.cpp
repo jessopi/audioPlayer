@@ -1,17 +1,14 @@
 #include "mainwindow.h"
-#include "mediabuttons.h"
 #include <QBoxLayout>
-#include <QMenuBar>
-#include <QWidget>
 #include <QHeaderView>
 #include <QToolBar>
 #include <QString>
-#include <QMessageBox>
 #include <QMenuBar>
 #include <QFileDialog>
 #include <QTime>
 #include "tfile.h"
 #include <QTextStream>
+#include <QFont>
 #include <QFileInfo>
 #include "tag.h"
 #include "fileref.h"
@@ -19,106 +16,115 @@
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
-    m_player = new QMediaPlayer(this);
-    m_player->setAudioRole(QAudio::MusicRole);
-    m_playlist = new QMediaPlaylist();
-    m_player->setPlaylist(m_playlist);
+    mediaPlayer = new QMediaPlayer(this);
+    mediaPlayer->setAudioRole(QAudio::MusicRole);
 
-    QMenu *file;
-    QMenu *file1;
+    mediaPlaylist = new QMediaPlaylist(this);
+    mediaPlayer->setPlaylist(mediaPlaylist);
+    mediaButtons = new MediaButtons(this);
 
-    QAction *open = new QAction(tr("Load Playlist"),this);
+    combinedLayout = new QWidget(this);
+
+    //Menu Bar creation
+    open = new QAction(tr("Load Playlist"),this);
+    save = new QAction(tr("Save Playlist"),this);
+    add = new QAction(tr("Add Song"),this);
+    remove = new QAction(tr("Remove Song"),this);
+    clear = new QAction(tr("Clear Songs"),this);
+
     connect(open,SIGNAL(triggered()),this,SLOT(loadPlaylist()));
-
-    QAction *save = new QAction(tr("Save Playlist"),this);
-    connect(save,SIGNAL(triggered()),this,SLOT(savePlaylist()));
+    connect(save,SIGNAL(triggered()),this,SLOT(savePlaylist())); 
+    connect(add,SIGNAL(triggered()),this,SLOT(addSong()));
+    connect(remove,SIGNAL(triggered()),this,SLOT(removeSong()));
+    connect(clear,SIGNAL(triggered()),this,SLOT(clearSong()));
 
     file = menuBar()->addMenu("File");
-
     file->addAction(save);
     file->addAction(open);
 
-    QAction *add = new QAction(tr("Add Song"),this);
-    connect(add,SIGNAL(triggered()),this,SLOT(addSong()));
+    edit = menuBar()->addMenu("Edit");
+    edit->addAction(add);
+    edit->addAction(remove);
+    edit->addAction(clear);
+    //Menu Bar creation end
 
-    QAction *remove = new QAction(tr("Remove Song"),this);
-    connect(remove,SIGNAL(triggered()),this,SLOT(removeSong()));
 
-    QAction *clear = new QAction(tr("Clear Songs"),this);
-    connect(clear,SIGNAL(triggered()),this,SLOT(clearSong()));
-
-    file1 = menuBar()->addMenu("Edit");
-    file1->addAction(add);
-    file1->addAction(remove);
-    file1->addAction(clear);
-
-    QWidget *wdg = new QWidget(this);
-    MediaButtons *mButtons = new MediaButtons(this);
-
-    songPlaylist = new QTableWidget(0,4,this);
+    playlistTable = new QTableWidget(0,4,this);
     QStringList labels;
     labels << tr("Title") << tr("Artist") <<tr("Album") <<tr("Length");
-    songPlaylist->setHorizontalHeaderLabels(labels);
-    songPlaylist->horizontalHeader()->setSectionResizeMode(0,QHeaderView::Stretch);
-    songPlaylist->horizontalHeader()->setSectionResizeMode(1,QHeaderView::Stretch);
-    songPlaylist->horizontalHeader()->setSectionResizeMode(2,QHeaderView::Stretch);
-    songPlaylist->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    songPlaylist->setSelectionMode(QAbstractItemView::SingleSelection);
-    songPlaylist->setSelectionBehavior(QAbstractItemView::SelectRows);
-    songPlaylist->verticalHeader()->hide();
+    playlistTable->setHorizontalHeaderLabels(labels);
+    playlistTable->horizontalHeader()->setSectionResizeMode(0,QHeaderView::Stretch);
+    playlistTable->horizontalHeader()->setSectionResizeMode(1,QHeaderView::Stretch);
+    playlistTable->horizontalHeader()->setSectionResizeMode(2,QHeaderView::Stretch);
+    playlistTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    playlistTable->setSelectionMode(QAbstractItemView::SingleSelection);
+    playlistTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+    playlistTable->verticalHeader()->hide();
 
-    m_Slider =  new QSlider(Qt::Horizontal,this);
-    m_Slider->setRange(0,m_player->duration() / 1000);
+    seekSlider =  new QSlider(Qt::Horizontal,this);
+    seekSlider->setRange(0,mediaPlayer->duration() / 1000);
 
     currentSongDuration = new QLabel(this);
     currentSongName = new QLabel(this);
     currentSongName->setText("");
+    QFont *k = new QFont();
+    k->setPixelSize(20);
+    currentSongName->setFont(*k);
 
-    connect(m_player, &QMediaPlayer::stateChanged, mButtons, &MediaButtons::setState);
-    connect(m_playlist,&QMediaPlaylist::currentIndexChanged,[&](int pos){
-        (m_playlist->currentIndex() != -1)?  currentSongName->setText(songPlaylist->item(pos,0)->text()) :  currentSongName->setText("");
+
+    //CONNECTORS
+    connect(mediaPlayer, &QMediaPlayer::stateChanged, mediaButtons, &MediaButtons::setState);
+    connect(mediaPlaylist,&QMediaPlaylist::currentIndexChanged,[&](int pos){
+        (mediaPlaylist->currentIndex() != -1)?  currentSongName->setText(playlistTable->item(pos,0)->text()) :  currentSongName->setText("");
     });
-    connect(mButtons, &MediaButtons::play,[&](){
-                    m_playlist->setCurrentIndex(songPlaylist->currentIndex().row());
-                    m_player->play();
+
+    connect(mediaButtons, &MediaButtons::play,[&](){
+        if(mediaPlaylist->currentIndex() == playlistTable->currentIndex().row())
+            mediaPlayer->play();
+        else
+        {
+            mediaPlaylist->setCurrentIndex(playlistTable->currentIndex().row());
+            mediaPlayer->play();
+        }
+
             });
-    connect(mButtons, &MediaButtons::pause,m_player, &QMediaPlayer::pause);
-    connect(mButtons, &MediaButtons::stop,[&](){
-        m_player->stop();
+    connect(mediaButtons, &MediaButtons::pause,mediaPlayer, &QMediaPlayer::pause);
+    connect(mediaButtons, &MediaButtons::stop,[&](){
+        //mediaPlayer->stop();
         currentSongName->setText("");
     });
-    connect(mButtons, &MediaButtons::next,m_playlist, &QMediaPlaylist::next);
-    connect(mButtons, &MediaButtons::previous,m_playlist, &QMediaPlaylist::previous);
-    connect(mButtons,&MediaButtons::muteToggle,m_player,&QMediaPlayer::setMuted);
-    connect(mButtons,&MediaButtons::volumeLevel,m_player,&QMediaPlayer::setVolume);
-    connect(m_Slider,&QSlider::sliderMoved,this,&MainWindow::seek);
-    connect(m_player,&QMediaPlayer::positionChanged,[&](quint64 pos){
-        if(!m_Slider->isSliderDown())
-            m_Slider->setValue(pos/1000);
+    connect(mediaButtons, &MediaButtons::next,mediaPlaylist, &QMediaPlaylist::next);
+    connect(mediaButtons, &MediaButtons::previous,mediaPlaylist, &QMediaPlaylist::previous);
+    connect(mediaButtons,&MediaButtons::muteToggle,mediaPlayer,&QMediaPlayer::setMuted);
+    connect(mediaButtons,&MediaButtons::volumeLevel,mediaPlayer,&QMediaPlayer::setVolume);
+    connect(seekSlider,&QSlider::sliderMoved,this,&MainWindow::seek);
+    connect(mediaPlayer,&QMediaPlayer::positionChanged,[&](quint64 pos){
+        if(!seekSlider->isSliderDown())
+            seekSlider->setValue(pos/1000);
 
         qint64 currentInfo = pos/1000;  
         currentSongDuration->setText(formatIntoTime(currentInfo));
     });
-    connect(m_player,&QMediaPlayer::durationChanged,[&](quint64 dur){
-        m_Slider->setMaximum(dur/1000);
+    connect(mediaPlayer,&QMediaPlayer::durationChanged,[&](quint64 dur){
+        seekSlider->setMaximum(dur/1000);
     });
-
-    connect(songPlaylist,&QTableWidget::doubleClicked,[&](const QModelIndex &index){
+    connect(playlistTable,&QTableWidget::doubleClicked,[&](const QModelIndex &index){
         int t = index.row();
-       m_playlist->setCurrentIndex(t);
-       m_player->play();
+       mediaPlaylist->setCurrentIndex(t);
+       mediaPlayer->play();
     });
-
+    //
+    //LAYOUT ARRANGEMENT
     QHBoxLayout *hLayout = new QHBoxLayout;
-    hLayout->addWidget(m_Slider);
+    hLayout->addWidget(seekSlider);
     hLayout->addWidget(currentSongDuration);
 
     QBoxLayout *displayLayout = new QHBoxLayout;
-    displayLayout->addWidget(songPlaylist);
+    displayLayout->addWidget(playlistTable);
 
     QBoxLayout *buttonLayout = new QHBoxLayout;
     buttonLayout->setMargin(0);
-    buttonLayout->addWidget(mButtons);
+    buttonLayout->addWidget(mediaButtons);
     buttonLayout->addStretch(1);
     buttonLayout->addWidget(currentSongName);
 
@@ -127,8 +133,8 @@ MainWindow::MainWindow(QWidget *parent)
     layout->addLayout(hLayout);
     layout->addLayout(displayLayout);
 
-    wdg->setLayout(layout);
-    setCentralWidget(wdg);
+    combinedLayout->setLayout(layout);
+    setCentralWidget(combinedLayout);
 }
 
 MainWindow::~MainWindow()
@@ -136,7 +142,7 @@ MainWindow::~MainWindow()
 
 void MainWindow::seek(int seconds)
 {
-    m_player->setPosition(seconds * 1000);
+    mediaPlayer->setPosition(seconds * 1000);
 }
 
 void MainWindow::loadPlaylist()
@@ -152,7 +158,7 @@ void MainWindow::loadPlaylist()
        {
           QString line = in.readLine();
           f.setFile(line);
-          m_playlist->addMedia(QUrl(f.absoluteFilePath()));
+          mediaPlaylist->addMedia(QUrl(f.absoluteFilePath()));
           parseMetadata(line);
        }
        inputFile.close();
@@ -168,9 +174,9 @@ void MainWindow::savePlaylist()
         QTextStream stream(&f);
         stream.setCodec("UTF-8");
 
-        for(int i = 0 ; i < m_playlist->mediaCount();i++)
+        for(int i = 0 ; i < mediaPlaylist->mediaCount();i++)
         {
-            stream<<m_playlist->media(i).canonicalUrl().path()<<endl;
+            stream<<mediaPlaylist->media(i).canonicalUrl().path()<<endl;
         }
     }
 }
@@ -183,29 +189,28 @@ void MainWindow::addSong()
     for(int i = 0; i < files.count();i++)
     {
         QFileInfo f(files.at(i));
-        m_playlist->addMedia(QUrl(f.absoluteFilePath()));
+        mediaPlaylist->addMedia(QUrl(f.absoluteFilePath()));
         parseMetadata(files.at(i));
     }
-    //int index = songPlaylist->currentIndex().row();
-    //songPlaylist->setCurrentRow(index);
+    //int index = playlistTable->currentIndex().row();
+    //playlistTable->setCurrentRow(index);
 }
 
 void MainWindow::removeSong()
 {
-    int index = songPlaylist->currentRow();
-    m_playlist->removeMedia(index);
-    songPlaylist->removeRow(index);
+    int index = playlistTable->currentRow();
+    mediaPlaylist->removeMedia(index);
+    playlistTable->removeRow(index);
     //updateSongLabel();
 }
 
 void MainWindow::clearSong()
 {
-    m_playlist->clear();
-    //songPlaylist->clear(); might be unneeded also clears headers which is a problem
-    songPlaylist->setRowCount(0);
+    mediaPlaylist->clear();
+    playlistTable->setRowCount(0);
     currentSongName->setText("");
-    //ui->playButton->setIcon(style()->standardIcon(QStyle::SP_MediaPause));
 
+    //ui->playButton->setIcon(style()->standardIcon(QStyle::SP_MediaPause));
 }
 
 QString MainWindow::formatIntoTime(quint64 input)
@@ -219,12 +224,12 @@ QString MainWindow::formatIntoTime(quint64 input)
 
 void MainWindow::parseMetadata(QString s)
 {
-    songPlaylist->insertRow(songPlaylist->rowCount());
+    playlistTable->insertRow(playlistTable->rowCount());
     TagLib::FileRef fileRef( reinterpret_cast<const wchar_t*>(s.constData()) );
 
-    songPlaylist->setItem(songPlaylist->rowCount()-1,0,new QTableWidgetItem(fileRef.tag()->title().toCString()));
-    songPlaylist->setItem(songPlaylist->rowCount()-1,1,new QTableWidgetItem(fileRef.tag()->artist().toCString()));
-    songPlaylist->setItem(songPlaylist->rowCount()-1,2,new QTableWidgetItem(fileRef.tag()->album().toCString()));
+    playlistTable->setItem(playlistTable->rowCount()-1,0,new QTableWidgetItem(fileRef.tag()->title().toCString()));
+    playlistTable->setItem(playlistTable->rowCount()-1,1,new QTableWidgetItem(fileRef.tag()->artist().toCString()));
+    playlistTable->setItem(playlistTable->rowCount()-1,2,new QTableWidgetItem(fileRef.tag()->album().toCString()));
     qint64 seconds = fileRef.audioProperties()->lengthInSeconds();
-    songPlaylist->setItem(songPlaylist->rowCount()-1,3,new QTableWidgetItem(formatIntoTime(seconds)));
+    playlistTable->setItem(playlistTable->rowCount()-1,3,new QTableWidgetItem(formatIntoTime(seconds)));
 }
