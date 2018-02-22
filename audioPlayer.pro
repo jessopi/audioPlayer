@@ -38,7 +38,9 @@ HEADERS += \
     framelesswindow/framelesswindow.h \
     framelesswindow/windowdragger.h \
     DarkStyle.h \
-    mediabuttons.h
+    mediabuttons.h \
+    ui_framelesswindow.h \
+    ui_mainwindow.h
 
 RESOURCES += \
     darkstyle.qrc \

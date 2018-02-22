@@ -1,5 +1,5 @@
 #include "mainwindow.h"
-
+#include <QDebug>
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
@@ -67,28 +67,25 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(mediaPlayer, &QMediaPlayer::stateChanged, mediaButtons, &MediaButtons::setState);
 
-    //sets currentsongname when music index changes
-    connect(mediaPlaylist,&QMediaPlaylist::currentIndexChanged,[&](int pos){
-        (mediaPlaylist->currentIndex() != -1)?  currentSongName->setText(playlistTable->item(pos,0)->text()) :  currentSongName->setText("");
-    });
-
     connect(mediaButtons, &MediaButtons::play,[&](){
-        if(mediaPlaylist->currentIndex() == playlistTable->currentIndex().row())
             mediaPlayer->play();
-        else
-        {
-            mediaPlaylist->setCurrentIndex(playlistTable->currentIndex().row());
-            mediaPlayer->play();
-        }
-
+            updateSongLabel();
             });
     connect(mediaButtons, &MediaButtons::pause,mediaPlayer, &QMediaPlayer::pause);
     connect(mediaButtons, &MediaButtons::stop,[&](){
         mediaPlayer->stop();
-        currentSongName->setText("");
+        updateSongLabel();
     });
-    connect(mediaButtons, &MediaButtons::next,mediaPlaylist, &QMediaPlaylist::next);
-    connect(mediaButtons, &MediaButtons::previous,mediaPlaylist, &QMediaPlaylist::previous);
+    connect(mediaButtons, &MediaButtons::next,[&](){
+        mediaPlaylist->next();
+        updateSongLabel();
+        playlistTable->selectRow(mediaPlaylist->currentIndex());
+    });
+    connect(mediaButtons, &MediaButtons::previous,[&](){
+                mediaPlaylist->previous();
+                updateSongLabel();
+                playlistTable->selectRow(mediaPlaylist->currentIndex());
+            });
     connect(mediaButtons,&MediaButtons::muteToggle,mediaPlayer,&QMediaPlayer::setMuted);
     connect(mediaButtons,&MediaButtons::volumeLevel,mediaPlayer,&QMediaPlayer::setVolume);
     connect(seekSlider,&QSlider::sliderMoved,this,&MainWindow::seek);
@@ -102,11 +99,12 @@ MainWindow::MainWindow(QWidget *parent)
     connect(mediaPlayer,&QMediaPlayer::durationChanged,[&](quint64 dur){
         seekSlider->setMaximum(dur/1000);
     });
+
     connect(playlistTable,&QTableWidget::doubleClicked,[&](const QModelIndex &index){
        mediaPlaylist->setCurrentIndex(index.row());
        mediaPlayer->play();
+       updateSongLabel();
     });
-
 
     /*****************Layout creation and arrangement***************/
 
@@ -135,6 +133,15 @@ MainWindow::MainWindow(QWidget *parent)
 MainWindow::~MainWindow()
 {}
 
+void MainWindow::updateSongLabel()
+{
+    if(mediaPlaylist->currentIndex() != -1 && mediaPlayer->state() != QMediaPlayer::StoppedState)
+         currentSongName->setText(playlistTable->item(mediaPlaylist->currentIndex(),0)->text());
+    else
+        currentSongName->setText("");
+
+}
+
 //sets position of song according to where seek slider is moved
 void MainWindow::seek(int seconds)
 {
@@ -160,6 +167,8 @@ void MainWindow::loadPlaylist()
        }
        inputFile.close();
     }
+    playlistTable->selectRow(mediaPlaylist->currentIndex() + 1);
+
 }
 
 //Opens dialog and saves playlist to playlist folder in UTF-8 format
@@ -199,17 +208,16 @@ void MainWindow::removeSong()
     int index = playlistTable->currentRow();
     mediaPlaylist->removeMedia(index);
     playlistTable->removeRow(index);
-    //prevents out of bounds error when setting songName to label
-    (mediaPlaylist->currentIndex() != -1)?  currentSongName->setText(playlistTable->item(playlistTable->currentRow(),0)->text()) :  currentSongName->setText("");
+    updateSongLabel();
 }
 
 //Removes all songs from mediaPlaylist and table
 void MainWindow::clearSong()
 {
     mediaPlaylist->clear();
+    updateSongLabel();
     //use setrowcount over clear, since clear removes header labels.
     playlistTable->setRowCount(0);
-    currentSongName->setText("");
 }
 
 //Formats input from seekSlider and parser and returns formatted string.

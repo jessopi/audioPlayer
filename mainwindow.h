@@ -29,6 +29,7 @@ public:
     ~MainWindow();
 
 public slots:
+    void updateSongLabel();
     void loadPlaylist();
     void savePlaylist();
     void addSong();
