@@ -25,4 +25,5 @@ Features
 
 Screenshots
 -------
+![](https://i.imgur.com/GmHVGFO.png)
 ![](https://i.imgur.com/Wo95MzG.png)
