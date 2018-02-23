@@ -1,7 +1,5 @@
 # audioPlayer
-Audioplayer designed in Qt.
-
-Currently only supports windows operating system and mp3 audio files.
+Audioplayer designed in Qt for windows operating systems.
 
 Frameless window & dark style from
 https://github.com/Jorgen-VikingGod/Qt-Frameless-Window-DarkStyle
@@ -20,11 +18,11 @@ Features
 -------
 - Standard music player features such as play,pause,previous,next,stop and repeat song.
 - Ability to seek through songs using seekbar.
+- Supports .mp3, .ogg, and .flac audio formats.
 - Save and load song playlists.
-- Metadata parsing for song title, artist, album and length
+- Metadata parsing for song title, artist, album and length.
 
 ### Upcoming
- - Support for additional audio formats(.ogg, .flac, .wav).
  - Linux compatibility.
  - Arrow key movement for playlistTable.
 
