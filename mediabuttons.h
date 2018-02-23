@@ -6,6 +6,8 @@
 #include <QSlider>
 #include <QPushButton>
 #include <QBoxLayout>
+#include <QAbstractButton>
+
 #include <QStyle>
 
 class MediaButtons : public QWidget
@@ -23,7 +25,10 @@ signals:
     void previous();
     void muteToggle(bool toggle);
     void volumeLevel(int vol);
+    void repeatBegin();
+    void repeatEnd();
 public slots:
+    void repeat();
     void playClicked();
     void muteClicked();
 
@@ -35,6 +40,7 @@ private:
     QPushButton *nextButton = nullptr;
     QPushButton *muteButton = nullptr;
     QSlider *volumeSlider = nullptr;
+    QAbstractButton *repeatButton = nullptr;
 
 
     QMediaPlayer::State currentPlayerState = QMediaPlayer::StoppedState;

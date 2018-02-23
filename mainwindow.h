@@ -61,6 +61,7 @@ private:
     QAction *clear = nullptr;
 
     QWidget *combinedLayout = nullptr;
+    bool repeat;
 };
 
 #endif // MAINWINDOW_H

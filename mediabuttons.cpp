@@ -1,5 +1,4 @@
 #include "mediabuttons.h"
-
 MediaButtons::MediaButtons(QWidget *parent) : QWidget(parent)
 {
     previousButton = new QPushButton(this);
@@ -17,11 +16,21 @@ MediaButtons::MediaButtons(QWidget *parent) : QWidget(parent)
     muteButton = new QPushButton(this);
     muteButton->setIcon(style()->standardIcon(QStyle::SP_MediaVolume));
 
-
     volumeSlider = new QSlider(Qt::Horizontal,this);
 
+    QIcon icon2;
+    icon2.addFile("Icons/repeat.png");
+    repeatButton = new QPushButton(this);
+    repeatButton->setIcon(icon2);
+    repeatButton->setCheckable(true);
 
     /*******CONNECTORS******/
+    connect(repeatButton,&QAbstractButton::clicked,[&](){
+       if(repeatButton->isChecked())
+           emit repeatBegin();
+       else
+           emit repeatEnd();
+    });
     connect(previousButton, &QPushButton::clicked,this,&MediaButtons::previous);
     connect(playButton, &QPushButton::clicked,this,&MediaButtons::playClicked);
     connect(stopButton, &QPushButton::clicked,this,&MediaButtons::stop);
@@ -42,6 +51,7 @@ MediaButtons::MediaButtons(QWidget *parent) : QWidget(parent)
     layout->addWidget(playButton);
     layout->addWidget(stopButton);
     layout->addWidget(nextButton);
+    layout->addWidget(repeatButton);
     layout->addWidget(muteButton);
     layout->addWidget(volumeSlider);
     setLayout(layout);
@@ -74,6 +84,11 @@ void MediaButtons::setState(QMediaPlayer::State state)
             playButton->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
         }
     }
+}
+
+void MediaButtons::repeat()
+{
+    repeatButton->toggle();
 }
 
 //toggles play and paused when clicked and changes icon

@@ -1,5 +1,4 @@
 #include "mainwindow.h"
-#include <QDebug>
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
@@ -11,6 +10,8 @@ MainWindow::MainWindow(QWidget *parent)
     mediaButtons = new MediaButtons(this);
 
     combinedLayout = new QWidget(this);
+
+    repeat = false;
 
     //Menu Bar creation
     open = new QAction(tr("Load Playlist"),this);
@@ -64,35 +65,42 @@ MainWindow::MainWindow(QWidget *parent)
 
     /******************Connections**********************/
 
+    connect(mediaPlaylist,&QMediaPlaylist::currentIndexChanged,[&](){
+        playlistTable->selectRow(mediaPlaylist->currentIndex());
+        updateSongLabel();
+    });
 
+    connect(mediaButtons,&MediaButtons::repeatBegin,[&](){repeat = true;});
+    connect(mediaButtons,&MediaButtons::repeatEnd,[&](){repeat = false;});
+
+    connect(mediaPlayer,&QMediaPlayer::mediaStatusChanged,[&](QMediaPlayer::MediaStatus currentStatus){
+        if(currentStatus == QMediaPlayer::EndOfMedia && repeat == true)
+        {
+            mediaPlayer->setPosition(0);
+            mediaPlayer->play();
+        }
+    });
     connect(mediaPlayer, &QMediaPlayer::stateChanged, mediaButtons, &MediaButtons::setState);
 
     connect(mediaButtons, &MediaButtons::play,[&](){
-            mediaPlayer->play();
-            updateSongLabel();
+                mediaPlayer->play();
+                updateSongLabel();
             });
     connect(mediaButtons, &MediaButtons::pause,mediaPlayer, &QMediaPlayer::pause);
     connect(mediaButtons, &MediaButtons::stop,[&](){
         mediaPlayer->stop();
-        updateSongLabel();
+        currentSongName->setText("");
     });
-    connect(mediaButtons, &MediaButtons::next,[&](){
-        mediaPlaylist->next();
-        updateSongLabel();
-        playlistTable->selectRow(mediaPlaylist->currentIndex());
-    });
-    connect(mediaButtons, &MediaButtons::previous,[&](){
-                mediaPlaylist->previous();
-                updateSongLabel();
-                playlistTable->selectRow(mediaPlaylist->currentIndex());
-            });
+
+    connect(mediaButtons, &MediaButtons::next,mediaPlaylist,&QMediaPlaylist::next);
+    connect(mediaButtons, &MediaButtons::previous,mediaPlaylist,&QMediaPlaylist::previous);
+
     connect(mediaButtons,&MediaButtons::muteToggle,mediaPlayer,&QMediaPlayer::setMuted);
     connect(mediaButtons,&MediaButtons::volumeLevel,mediaPlayer,&QMediaPlayer::setVolume);
     connect(seekSlider,&QSlider::sliderMoved,this,&MainWindow::seek);
     connect(mediaPlayer,&QMediaPlayer::positionChanged,[&](quint64 pos){
         if(!seekSlider->isSliderDown())
             seekSlider->setValue(pos/1000);
-
         qint64 currentInfo = pos/1000;
         currentSongDuration->setText(formatIntoTime(currentInfo));
     });
@@ -103,7 +111,6 @@ MainWindow::MainWindow(QWidget *parent)
     connect(playlistTable,&QTableWidget::doubleClicked,[&](const QModelIndex &index){
        mediaPlaylist->setCurrentIndex(index.row());
        mediaPlayer->play();
-       updateSongLabel();
     });
 
     /*****************Layout creation and arrangement***************/
@@ -135,11 +142,10 @@ MainWindow::~MainWindow()
 
 void MainWindow::updateSongLabel()
 {
-    if(mediaPlaylist->currentIndex() != -1 && mediaPlayer->state() != QMediaPlayer::StoppedState)
-         currentSongName->setText(playlistTable->item(mediaPlaylist->currentIndex(),0)->text());
+    if(mediaPlaylist->currentIndex() != -1)
+        currentSongName->setText(playlistTable->item(mediaPlaylist->currentIndex(),0)->text());
     else
         currentSongName->setText("");
-
 }
 
 //sets position of song according to where seek slider is moved
@@ -191,7 +197,7 @@ void MainWindow::savePlaylist()
 //Opens dialog to open X amount of media files and add them to playlist & table
 void MainWindow::addSong()
 {
-    QStringList files = QFileDialog::getOpenFileNames(this, tr("Select Music Files"),"",tr("Audio files (*.mp3)"));
+    QStringList files = QFileDialog::getOpenFileNames(this, tr("Select Music Files"),"",tr("Audio files (*.mp3 *.flac *.ogg)"));
     if(files.empty())
           return;
     for(int i = 0; i < files.count();i++)

@@ -47,4 +47,3 @@ RESOURCES += \
     framelesswindow.qrc
 
 LIBS += -LC:/Users/I_jes/Desktop/taglib/lib -ltag
-#PRE_TARGETDEPS += C:/Users/I_jes/Desktop/taglib/lib/libtag.dll.a
