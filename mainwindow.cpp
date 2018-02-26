@@ -1,14 +1,13 @@
 #include "mainwindow.h"
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent)
-{
+    : QMainWindow(parent){
+
     mediaPlayer = new QMediaPlayer(this);
     mediaPlayer->setAudioRole(QAudio::MusicRole);
 
     mediaPlaylist = new QMediaPlaylist(this);
     mediaPlayer->setPlaylist(mediaPlaylist);
     mediaButtons = new MediaButtons(this);
-
     combinedLayout = new QWidget(this);
 
     repeat = false;
@@ -62,7 +61,6 @@ MainWindow::MainWindow(QWidget *parent)
     k.setPixelSize(20);
     currentSongName->setFont(k);
 
-
     /******************Connections**********************/
 
     connect(mediaPlaylist,&QMediaPlaylist::currentIndexChanged,[&](){
@@ -74,8 +72,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(mediaButtons,&MediaButtons::repeatEnd,[&](){repeat = false;});
 
     connect(mediaPlayer,&QMediaPlayer::mediaStatusChanged,[&](QMediaPlayer::MediaStatus currentStatus){
-        if(currentStatus == QMediaPlayer::EndOfMedia && repeat == true)
-        {
+        if(currentStatus == QMediaPlayer::EndOfMedia && repeat == true){
             mediaPlayer->setPosition(0);
             mediaPlayer->play();
         }
@@ -98,12 +95,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(mediaButtons,&MediaButtons::muteToggle,mediaPlayer,&QMediaPlayer::setMuted);
     connect(mediaButtons,&MediaButtons::volumeLevel,mediaPlayer,&QMediaPlayer::setVolume);
     connect(seekSlider,&QSlider::sliderMoved,this,&MainWindow::seek);
-    connect(mediaPlayer,&QMediaPlayer::positionChanged,[&](quint64 pos){
-        if(!seekSlider->isSliderDown())
-            seekSlider->setValue(pos/1000);
-        qint64 currentInfo = pos/1000;
-        currentSongDuration->setText(formatIntoTime(currentInfo));
-    });
+    connect(mediaPlayer,&QMediaPlayer::positionChanged,this,&MainWindow::sliderMoved);
     connect(mediaPlayer,&QMediaPlayer::durationChanged,[&](quint64 dur){
         seekSlider->setMaximum(dur/1000);
     });
@@ -115,12 +107,12 @@ MainWindow::MainWindow(QWidget *parent)
 
     /*****************Layout creation and arrangement***************/
 
-    QHBoxLayout *hLayout = new QHBoxLayout();
-    hLayout->addWidget(seekSlider);
-    hLayout->addWidget(currentSongDuration);
+    QHBoxLayout *seekLayout = new QHBoxLayout();
+    seekLayout->addWidget(seekSlider);
+    seekLayout->addWidget(currentSongDuration);
 
-    QBoxLayout *displayLayout = new QHBoxLayout();
-    displayLayout->addWidget(playlistTable);
+    QBoxLayout *tableLayout = new QHBoxLayout();
+    tableLayout->addWidget(playlistTable);
 
     QBoxLayout *buttonLayout = new QHBoxLayout();
     buttonLayout->setMargin(0);
@@ -128,20 +120,30 @@ MainWindow::MainWindow(QWidget *parent)
     buttonLayout->addStretch(1);
     buttonLayout->addWidget(currentSongName);
 
-    QBoxLayout *layout = new QVBoxLayout();
-    layout->addLayout(buttonLayout);
-    layout->addLayout(hLayout);
-    layout->addLayout(displayLayout);
+    QBoxLayout *layoutCombination = new QVBoxLayout();
+    layoutCombination->addLayout(buttonLayout);
+    layoutCombination->addLayout(seekLayout);
+    layoutCombination->addLayout(tableLayout);
 
-    combinedLayout->setLayout(layout);
+    combinedLayout->setLayout(layoutCombination);
     setCentralWidget(combinedLayout);
+
+    playlistTable->setFocus();
 }
 
-MainWindow::~MainWindow()
-{}
+MainWindow::~MainWindow(){}
 
-void MainWindow::updateSongLabel()
-{
+void MainWindow::sliderMoved(quint64 pos){
+    if(!seekSlider->isSliderDown())
+        seekSlider->setValue(pos/1000);
+
+    quint64 currentInfo = pos/1000;
+    currentSongDuration->setText(formatIntoTime(currentInfo));
+    playlistTable->setFocus();
+}
+
+void MainWindow::updateSongLabel(){
+
     if(mediaPlaylist->currentIndex() != -1)
         currentSongName->setText(playlistTable->item(mediaPlaylist->currentIndex(),0)->text());
     else
@@ -149,68 +151,72 @@ void MainWindow::updateSongLabel()
 }
 
 //sets position of song according to where seek slider is moved
-void MainWindow::seek(int seconds)
-{
+void MainWindow::seek(int seconds){
     mediaPlayer->setPosition(seconds * 1000);
 }
 
+//Polls for keypress event
+void MainWindow::keyPressEvent(QKeyEvent *event){
+
+    if(event->key() == Qt::Key_Return){
+       mediaPlaylist->setCurrentIndex(playlistTable->currentRow());
+       mediaPlayer->play();
+    }
+}
+
 //opens chosen textfile located in Playlist folder and adds contents to mediaplaylist and table
-void MainWindow::loadPlaylist()
-{
+void MainWindow::loadPlaylist(){
+
     QString fileName = QFileDialog::getOpenFileName(this,tr("Load File"),"Playlists",tr("Text files (*.txt)"));
     QFile inputFile(fileName);
     QFileInfo f;
-    if (inputFile.open(QIODevice::ReadOnly))
-    {
+    if (inputFile.open(QIODevice::ReadOnly)){
        QTextStream in(&inputFile);
-        in.setCodec("UTF-8");
-       while (!in.atEnd())
-       {
+       in.setCodec("UTF-8");
+       while (!in.atEnd()){
           QString line = in.readLine();
           f.setFile(line);
           mediaPlaylist->addMedia(QUrl(f.absoluteFilePath()));
           parseMetadata(line);
        }
        inputFile.close();
+       playlistTable->selectRow(mediaPlaylist->currentIndex() + 1);
     }
-    playlistTable->selectRow(mediaPlaylist->currentIndex() + 1);
-
+    playlistTable->setFocus();
 }
 
 //Opens dialog and saves playlist to playlist folder in UTF-8 format
-void MainWindow::savePlaylist()
-{
+void MainWindow::savePlaylist(){
+
     QString fileName = QFileDialog::getSaveFileName(this, tr("Save File"),"Playlists",tr("Text files (*.txt)"));
     QFile f(fileName);
-    if(f.open(QIODevice::WriteOnly))
-    {
+    if(f.open(QIODevice::WriteOnly)){
         QTextStream stream(&f);
         stream.setCodec("UTF-8");
-
-        for(int i = 0 ; i < mediaPlaylist->mediaCount();i++)
-        {
+        for(int i = 0 ; i < mediaPlaylist->mediaCount();i++){
             stream<<mediaPlaylist->media(i).canonicalUrl().path()<<endl;
         }
     }
 }
 
 //Opens dialog to open X amount of media files and add them to playlist & table
-void MainWindow::addSong()
-{
+void MainWindow::addSong(){
+
     QStringList files = QFileDialog::getOpenFileNames(this, tr("Select Music Files"),"",tr("Audio files (*.mp3 *.flac *.ogg)"));
     if(files.empty())
           return;
-    for(int i = 0; i < files.count();i++)
-    {
+    for(int i = 0; i < files.count();i++){
         QFileInfo f(files.at(i));
         mediaPlaylist->addMedia(QUrl(f.absoluteFilePath()));
         parseMetadata(files.at(i));
     }
+
+    playlistTable->setFocus();
 }
 
 //Removes selected index from mediaPlaylist & table
-void MainWindow::removeSong()
-{
+void MainWindow::removeSong(){
+
     int index = playlistTable->currentRow();
     mediaPlaylist->removeMedia(index);
     playlistTable->removeRow(index);
@@ -218,8 +224,8 @@ void MainWindow::removeSong()
 }
 
 //Removes all songs from mediaPlaylist and table
-void MainWindow::clearSong()
-{
+void MainWindow::clearSong(){
+
     mediaPlaylist->clear();
     updateSongLabel();
     //use setrowcount over clear, since clear removes header labels.
@@ -236,16 +242,18 @@ QString MainWindow::formatIntoTime(quint64 input)
      return outputString;
 }
 
-//Parses metadata of mp3 files only.
-//To include other file parsing need to add functions for that specific file.
-void MainWindow::parseMetadata(QString s)
-{
-    playlistTable->insertRow(playlistTable->rowCount());
-    TagLib::FileRef fileRef( reinterpret_cast<const wchar_t*>(s.constData()) );
+//Parses metadata and inserts parsed data into row of playlistTable
+//If a nonvalid filepath is passed program crashes, need to assert correct filepath?
+void MainWindow::parseMetadata(QString s){
 
-    playlistTable->setItem(playlistTable->rowCount()-1,0,new QTableWidgetItem(fileRef.tag()->title().toCString()));
-    playlistTable->setItem(playlistTable->rowCount()-1,1,new QTableWidgetItem(fileRef.tag()->artist().toCString()));
-    playlistTable->setItem(playlistTable->rowCount()-1,2,new QTableWidgetItem(fileRef.tag()->album().toCString()));
+    int currentRow = playlistTable->rowCount();
+    playlistTable->insertRow(currentRow);
+
+    TagLib::FileRef fileRef( reinterpret_cast<const wchar_t*>(s.constData()) );
     qint64 seconds = fileRef.audioProperties()->lengthInSeconds();
-    playlistTable->setItem(playlistTable->rowCount()-1,3,new QTableWidgetItem(formatIntoTime(seconds)));
+
+    playlistTable->setItem(currentRow,0,new QTableWidgetItem(fileRef.tag()->title().toCString()));
+    playlistTable->setItem(currentRow,1,new QTableWidgetItem(fileRef.tag()->artist().toCString()));
+    playlistTable->setItem(currentRow,2,new QTableWidgetItem(fileRef.tag()->album().toCString()));
+    playlistTable->setItem(currentRow,3,new QTableWidgetItem(formatIntoTime(seconds)));
 }

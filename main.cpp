@@ -10,7 +10,7 @@ int main(int argc, char *argv[])
     a.setStyle(new DarkStyle);
     FramelessWindow frameless;
 
-    frameless.setWindowTitle("musicPlayer");
+    frameless.setWindowTitle("audioPlayer");
     MainWindow *w = new MainWindow;
     frameless.setContent(w);
     frameless.show();

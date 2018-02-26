@@ -9,6 +9,7 @@
 #include <QSlider>
 #include <QBoxLayout>
 #include <QHeaderView>
+#include <QKeyEvent>
 
 #include <QMenuBar>
 #include <QFileDialog>
@@ -19,7 +20,6 @@
 #include "mediabuttons.h"
 #include "tag.h"
 #include "fileref.h"
-
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -29,6 +29,7 @@ public:
     ~MainWindow();
 
 public slots:
+    void sliderMoved(quint64 pos);
     void updateSongLabel();
     void loadPlaylist();
     void savePlaylist();
@@ -39,7 +40,7 @@ private:
     QString formatIntoTime(quint64);
     void parseMetadata(QString s);
     void seek(int seconds);
-
+    void keyPressEvent(QKeyEvent *event);
     QMediaPlayer *mediaPlayer = nullptr;
     QMediaPlaylist *mediaPlaylist = nullptr;
     MediaButtons *mediaButtons = nullptr;

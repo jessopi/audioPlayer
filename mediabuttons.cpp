@@ -15,7 +15,7 @@ MediaButtons::MediaButtons(QWidget *parent) : QWidget(parent)
 
     muteButton = new QPushButton(this);
     muteButton->setIcon(style()->standardIcon(QStyle::SP_MediaVolume));
-
+    muteButton->setFocusPolicy(Qt::NoFocus);
     volumeSlider = new QSlider(Qt::Horizontal,this);
 
     QIcon icon2;
