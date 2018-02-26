@@ -12,6 +12,7 @@ Requirements
 -------
 - Qt5 installed
 - Taglib library 
+- Compile Taglib using Qt compiler installed during installation and then update .pro file to match file path of library.
 - K-Lite_Codec
 
 Features
@@ -21,10 +22,6 @@ Features
 - Supports .mp3, .ogg, and .flac audio formats.
 - Save and load song playlists.
 - Metadata parsing for song title, artist, album and length.
-
-### Upcoming
- - Linux compatibility.
- - Arrow key movement for playlistTable.
 
 Screenshots
 -------
